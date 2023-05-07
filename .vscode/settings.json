@@ -1,0 +1,11 @@
+{
+  "files.associations": {
+    "tuntap.h": "c",
+    "utils.h": "c",
+    "stdint.h": "c",
+    "inet.h": "c",
+    "ethernet.h": "c",
+    "compare": "c",
+    "type_traits": "c"
+  }
+}
