@@ -1,24 +1,79 @@
-## 项目介绍
+## Project Introduction
 
-实现一个类似于 Zerotier 的 L2 VPN，或者叫虚拟交换机（Virtual Switch）。
+Implement a L2 VPN similar to Zerotier or a Virtual Switch.
 
-它的功能就是模拟一个物理交换机的行为，负责为连接到交换机各个端口的设备提供Ethernet帧交换服务。
+Its function is to simulate the behavior of a physical switch, providing Ethernet frame exchange services for devices connected to the switch's ports.
 
-不同之处在于，这个虚拟交换机的各个端口可以跨越互联网连接到世界各地的设备上，对于操作系统来说，仿佛它们处于同一个局域网。
+The difference is that the ports of this virtual switch can be connected to devices all over the world through the Internet, making them appear to be in the same local area network for the operating system.
 
-## 项目架构
-- 由一个服务端（VServer/VSwitch）和若干客户端（VClient/VPort）组成
-- 服务端（VServer）的功能是模拟物理交换机的行为，为连接到交换机的各个客户端（VClient/VPort）提供Ethernet帧交换服务。
-  - 维护ARP表
+## Background Knowledge
+
+### Switch
+
+Switches work at the L2 (Data Link Layer) of the OSI Model and can recognize and forward Ethernet frames. When forwarding packets, switches use a forwarding table to look up the port corresponding to the destination address.
+
+In a switch, the forwarding table is generally called the MAC address table. This table maintains the MAC addresses known in the local network and their corresponding port numbers. When a switch receives a data frame, it looks up the port corresponding to the destination MAC address in the forwarding table, and forwards the data frame only to that port, thereby achieving data forwarding within the local area network. If the destination MAC address is not in the table, the switch will forward the data frame to all ports except the receiving port so that the target device can respond and update the forwarding table.
+
+In this project, we will write software as a virtual switch to achieve Ethernet frame exchange function.
+
+### TAP Device
+
+TAP is a type of virtual network device that can simulate a physical network interface, allowing operating systems and applications to use it like a physical interface. TAP devices are commonly used to create virtual private network (VPN) connections between different computers for secure data transmission over public networks.
+
+The TAP device is implemented in the operating system kernel. It looks like a regular network interface and can be used in applications like a regular physical network card. When packets are sent through the TAP device, they are passed to the TUN/TAP driver in the kernel, which passes the packets to the application. The application can process the packets and pass them to other devices or networks. Similarly, when applications send packets, they are passed to the TUN/TAP driver, which forwards them to the specified target device or network.
+
+In this project, the TAP device is used to connect client computers and the virtual switch, enabling packet forwarding between client computers and the virtual switch.
+
+## Project Architecture
+- Composed of one server (VServer/VSwitch) and several clients (VClient/VPort)
+- The server (VServer/VSwitch) simulates the behavior of a physical switch, providing Ethernet frame exchange services for each client (VClient/VPort) connected to the switch.
+  - Maintains a MAC table
     |MAC|VPort/VClient|
     |--|--|
     11:11:11:11:11:11 | VClient-1
     aa:aa:aa:aa:aa:aa | VClient-a
-  - 根据 ARP 表，实现 L2 数据包转发
-- 客户端（VClient）的功能是模拟物理交换机端口（VPort），负责将交换机发往端口的数据送往计算机，以及将计算机发往端口的数据发给交换机
-  - 一端连接 TAP 设备
-  - 一端连接通过网络 VServer
-  - 负责 TAP 设备和 VServer 之间的数据包转发
+  - Implement Ethernet frame forwarding based on the MAC table
+- The client (VClient) simulates the behavior of a physical switch port (VPort), responsible for forwarding data sent to the switch to the computer, and forwarding data sent from the computer to the switch.
+  - One end is connected to the TAP device.
+  - One end is connected to the VServer through the network.
+  - Responsible for packet forwarding between the TAP device and VServer.
     ```
     Linux Kernel <==[TAP]==> VClient <==[UDP]==> VServer
+    ```
+
+    ```
+        +----------------------------------------------+
+        |               VServer/VSwitch                |
+        |                                              |
+        |     +----------------+---------------+       |
+        |     |            MAC Table           |       |
+        |     |------------------------0-------+       |
+        |     |      MAC       |      VPort    |       |
+        |     |--------------------------------+       |
+        |     | 11:11:11:11:11 |   VClient-1   |       |
+        |     |--------------------------------+       |
+        |     | aa:aa:aa:aa:aa |   VClient-a   |       |
+        |     +----------------+---------------+       |
+        |                                              |
+        |           ^                       ^          |
+        +-----------|-----------------------|----------+
+            +-------|--------+     +--------|-------+
+            |       v        |     |        v       |
+            | +------------+ |     | +------------+ |
+            | | UDP Socket | |     | | UDP Socket | |
+            | +------------+ |     | +------------+ |
+            |       ^        |     |        ^       |
+            |       |        |     |        |       |
+            | Ethernet Frame |     | Ethernet Frame |
+            |       |        |     |        |       |
+      VPort |       v        |     |        v       | VPort
+            | +------------+ |     | +------------+ |
+            | | TAP Device | |     | | TAP Device | |
+            | +------------+ |     | +------------+ |
+            |       ^        |     |        ^       |
+            +-------|--------+     +--------|-------+
+                    v                       v
+        ------------------------------------------------
+                        Linux Kernel                   
+
     ```

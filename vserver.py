@@ -7,7 +7,7 @@ import socket
 vserver_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 vserver_sock.bind(("0.0.0.0", 6666))
 
-arp_cache = {}
+mac_table = {}
 
 while True:
   # 1. read ethernet frame from VClient/VPort
@@ -23,22 +23,22 @@ while True:
   print(f"[VServer] vclient_addr<{vclient_addr}> "
         "src<{eth_src}> dst<{eth_dst}> datasz<{len(data)}>")
   
-  # 3. insert/update arp cache
-  if (eth_src not in arp_cache or arp_cache[eth_src] != vclient_addr):
-    arp_cache[eth_src] = vclient_addr
-    print(f"    ARP Cache: {arp_cache}")
+  # 3. insert/update mac table
+  if (eth_src not in mac_table or mac_table[eth_src] != vclient_addr):
+    mac_table[eth_src] = vclient_addr
+    print(f"    ARP Cache: {mac_table}")
 
   # 4. forward ethernet frame
-  #    if dest in arp cache, forward ethernet frame to it
-  if eth_dst in arp_cache:
-    vserver_sock.sendto(data, arp_cache[eth_dst])
+  #    if dest in mac table, forward ethernet frame to it
+  if eth_dst in mac_table:
+    vserver_sock.sendto(data, mac_table[eth_dst])
     print(f"    Forwarded to: {eth_dst}")
   #    if dest is broadcast address, 
   #    broadcast ethernet frame to every known VPort except source VPort
   elif eth_dst == "ff:ff:ff:ff:ff:ff":
-    brd_dst_macs = list(arp_cache.keys())
+    brd_dst_macs = list(mac_table.keys())
     brd_dst_macs.remove(eth_src)
-    brd_dst_vports = {arp_cache[mac] for mac in brd_dst_macs}
+    brd_dst_vports = {mac_table[mac] for mac in brd_dst_macs}
     print(f"    Broadcasted to: {brd_dst_vports}")
     for brd_dst in brd_dst_vports:
       vserver_sock.sendto(data, brd_dst)
