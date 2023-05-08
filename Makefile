@@ -2,11 +2,11 @@ CFLAGS = -I.
 CFLAGS += -g -Werror=return-type
 
 HEADERS = *.h misc/*.h proto/*.h
-TARGETS = main
+TARGETS = vclient
 
 all: ${TARGETS}
 
-main: tuntap.o main.o $(HEADERS)
+vclient: tuntap.o vclient.o $(HEADERS)
 
 *.o: $(HEADERS)
 
