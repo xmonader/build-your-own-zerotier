@@ -7,7 +7,7 @@
 不同之处在于，这个虚拟交换机的各个端口可以跨越互联网连接到世界各地的设备上，对于操作系统来说，仿佛它们处于同一个局域网。
 
 ## 项目架构
-- 由一个服务端（VServer）和若干客户端（VClient/VPort）组成
+- 由一个服务端（VServer/VSwitch）和若干客户端（VClient/VPort）组成
 - 服务端（VServer）的功能是模拟物理交换机的行为，为连接到交换机的各个客户端（VClient/VPort）提供Ethernet帧交换服务。
   - 维护ARP表
     |MAC|VPort/VClient|

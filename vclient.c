@@ -7,11 +7,14 @@
 #include <net/ethernet.h>
 #include <pthread.h>
 
+/**
+ * VClient Instance
+ */
 struct vclient_t
 {
-  int tapfd;
-  int vclient_sockfd;
-  struct sockaddr_in vserver_addr;
+  int tapfd;                       // TAP device file descriptor, connected to linux kernel network stack
+  int vclient_sockfd;              // client socket, for communicating with VServer/VSwitch
+  struct sockaddr_in vserver_addr; // VServer address
 };
 
 void vclient_init(struct vclient_t *vclient, const char *vserver_ip_str, int vserver_port);
@@ -46,7 +49,7 @@ int main(int argc, char const *argv[])
     ERROR_PRINT_THEN_EXIT("fail to pthread_create: %s\n", strerror(errno));
   }
 
-  // wait
+  // wait for up forwarder & down forwarder
   if (pthread_join(up_forwarder, NULL) != 0 || pthread_join(down_forwarder, NULL) != 0)
   {
     ERROR_PRINT_THEN_EXIT("fail to pthread_join: %s\n", strerror(errno));
@@ -55,6 +58,9 @@ int main(int argc, char const *argv[])
   return 0;
 }
 
+/**
+ * init VClient instance: create TAP device and client socket
+ */
 void vclient_init(struct vclient_t *vclient, const char *vserver_ip_str, int vserver_port)
 {
   // alloc tap device
@@ -65,12 +71,14 @@ void vclient_init(struct vclient_t *vclient, const char *vserver_ip_str, int vse
     ERROR_PRINT_THEN_EXIT("fail to tap_alloc: %s\n", strerror(errno));
   }
 
-  // create socket & prepare vserver info
+  // create socket
   int vclient_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   if (vclient_sockfd < 0)
   {
     ERROR_PRINT_THEN_EXIT("fail to socket: %s\n", strerror(errno));
   }
+
+  // setup vserver info
   struct sockaddr_in vserver_addr;
   memset(&vserver_addr, 0, sizeof(vserver_addr));
   vserver_addr.sin_family = AF_INET;
@@ -87,18 +95,23 @@ void vclient_init(struct vclient_t *vclient, const char *vserver_ip_str, int vse
   printf("[VClient] TAP device name: %s, VServer: %s:%d\n", ifname, vserver_ip_str, vserver_port);
 }
 
+/**
+ * Forward ethernet frame from TAP device to VServer
+ */
 void *forward_ether_data_to_vserver(void *raw_vclient)
 {
   struct vclient_t *vclient = (struct vclient_t *)raw_vclient;
   char ether_data[ETHER_MAX_LEN];
   while (true)
   {
+    // read ethernet from tap device
     int ether_datasz = read(vclient->tapfd, ether_data, sizeof(ether_data));
     if (ether_datasz > 0)
     {
       assert(ether_datasz >= 14);
       const struct ether_header *hdr = (const struct ether_header *)ether_data;
 
+      // forward ethernet frame to VServer/VSwitch
       ssize_t sendsz = sendto(vclient->vclient_sockfd, ether_data, ether_datasz, 0, (struct sockaddr *)&vclient->vserver_addr, sizeof(vclient->vserver_addr));
       if (sendsz != ether_datasz)
       {
@@ -118,12 +131,16 @@ void *forward_ether_data_to_vserver(void *raw_vclient)
   }
 }
 
+/**
+ * Forward ethernet frame from VServer to TAP device
+ */
 void *forward_ether_data_to_tap(void *raw_vclient)
 {
   struct vclient_t *vclient = (struct vclient_t *)raw_vclient;
   char ether_data[ETHER_MAX_LEN];
   while (true)
   {
+    // read ethernet frame from VServer/VSwitch
     socklen_t vserver_addr = sizeof(vclient->vserver_addr);
     int ether_datasz = recvfrom(vclient->vclient_sockfd, ether_data, sizeof(ether_data), 0,
                                 (struct sockaddr *)&vclient->vserver_addr, &vserver_addr);
@@ -132,6 +149,7 @@ void *forward_ether_data_to_tap(void *raw_vclient)
       assert(ether_datasz >= 14);
       const struct ether_header *hdr = (const struct ether_header *)ether_data;
 
+      // forward ethernet frame to TAP device (Linux network stack)
       ssize_t sendsz = write(vclient->tapfd, ether_data, ether_datasz);
       if (sendsz != ether_datasz)
       {
