@@ -10,6 +10,14 @@
     "if_tun.h": "c",
     "if_arp.h": "c",
     "if_ether.h": "c",
-    "arp.h": "c"
+    "arp.h": "c",
+    "portable_network.h": "c",
+    "logger.h": "c",
+    "stdbool.h": "c",
+    "errno.h": "c",
+    "pthread.h": "c",
+    "glib.h": "c",
+    "dump.h": "c",
+    "if.h": "c"
   }
 }
