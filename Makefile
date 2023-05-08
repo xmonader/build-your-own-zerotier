@@ -1,7 +1,7 @@
 CFLAGS = -I.
 CFLAGS += -g -Werror=return-type
 
-HEADERS = misc/*.h *.h
+HEADERS = *.h misc/*.h proto/*.h
 TARGETS = main
 
 all: ${TARGETS}

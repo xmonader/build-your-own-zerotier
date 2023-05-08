@@ -6,6 +6,10 @@
     "inet.h": "c",
     "ethernet.h": "c",
     "compare": "c",
-    "type_traits": "c"
+    "type_traits": "c",
+    "if_tun.h": "c",
+    "if_arp.h": "c",
+    "if_ether.h": "c",
+    "arp.h": "c"
   }
 }

@@ -16,7 +16,7 @@ int tap_alloc(char *dev)
    *        IFF_NO_PI - Do not provide packet information
    */
   memset(&ifr, 0, sizeof(ifr));
-  ifr.ifr_flags = IFF_TAP |  IFF_NO_PI;
+  ifr.ifr_flags = IFF_TAP;
   if (*dev)
   {
     strncpy(ifr.ifr_name, dev, IFNAMSIZ);
