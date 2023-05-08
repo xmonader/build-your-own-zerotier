@@ -1,3 +1,7 @@
+[English](README.md) | [中文](README_CN.md)
+
+# Build your own Zerotier
+
 ## 项目介绍
 
 实现一个类似于 Zerotier 的 L2 VPN，或者叫虚拟交换机（Virtual Switch）。
@@ -78,3 +82,64 @@ TAP 设备在操作系统内核中实现，它看起来像一个普通的网络�
                         Linux Kernel                   
 
     ```
+
+## 代码说明
+
+1. `vserver.py`: code fro VServer
+2. `vclient.c`: code fro VClient
+
+## 编译
+```
+make
+```
+
+## 运行
+
+### 环境准备
+
+- 一个具备公网 IP 的服务器，用于运行 VServer
+- 至少两台客户端，用于运行 VClient，接入 VServer 构建 Virtual Private Network
+- 假设公网 IP 为 `VSERVER_IP`，服务器端口为 `VSERVER_PORT`
+
+### Step 1. 运行 VServer
+在具有公网IP的服务器上
+```
+python3 vserver.py
+```
+
+### Step 2. 运行并配置 VClient-1
+
+- 运行 VClient
+    ```
+    sudo ./vclient ${VSERVER_IP} ${VSERVER_PORT}
+    ```
+- 配置 TAP 设备
+    ```
+    sudo ip addr add 10.1.1.101/24 dev tapyuan
+    sudo ip link set tapyuan up
+    ```
+
+### Step 3. 运行并配置 VClient-2
+
+- 运行 VClient
+    ```
+    sudo ./vclient ${VSERVER_IP} ${VSERVER_PORT}
+    ```
+- 配置 TAP 设备
+    ```
+    sudo ip addr add 10.1.1.102/24 dev tapyuan
+    sudo ip link set tapyuan up
+    ```
+
+### Step 4. ping 连通性测试
+
+- 在 VClient-1 上 ping VClient-2
+    ```
+    ping 10.1.1.102
+    ```
+- 在 VClient-2 上 ping VClient-1
+    ```
+    ping 10.1.1.101
+    ```
+### 效果图
+![](https://cdn.jsdelivr.net/gh/peiyuanix/picgo-repo/data/QQ图片20230509034140.png)

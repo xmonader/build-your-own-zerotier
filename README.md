@@ -1,3 +1,7 @@
+[English](README.md) | [中文](README_CN.md)
+
+# Build your own Zerotier
+
 ## Project Introduction
 
 Implement a L2 VPN similar to Zerotier or a Virtual Switch.
@@ -77,3 +81,64 @@ In this project, the TAP device is used to connect client computers and the virt
                         Linux Kernel                   
 
     ```
+
+## Code Explanation
+
+1. `vserver.py`: code for VServer
+2. `vclient.c`: code for VClient
+
+## Compilation
+```
+make
+```
+
+## Execution
+
+### Environment Preparation
+
+- A server with a public IP address, used to run VServer
+- At least two clients, used to run VClient and connect to VServer to build a Virtual Private Network
+- Assuming the public IP is `VSERVER_IP` and the server port is `VSERVER_PORT`
+
+### Step 1. Run VServer
+On the server with a public IP address:
+```
+python3 vserver.py
+```
+
+### Step 2. Run and Configure VClient-1
+
+- Run VClient
+    ```
+    sudo ./vclient ${VSERVER_IP} ${VSERVER_PORT}
+    ```
+- Configure TAP device
+    ```
+    sudo ip addr add 10.1.1.101/24 dev tapyuan
+    sudo ip link set tapyuan up
+    ```
+
+### Step 3. Run and Configure VClient-2
+
+- Run VClient
+    ```
+    sudo ./vclient ${VSERVER_IP} ${VSERVER_PORT}
+    ```
+- Configure TAP device
+    ```
+    sudo ip addr add 10.1.1.102/24 dev tapyuan
+    sudo ip link set tapyuan up
+    ```
+
+### Step 4. Ping Connectivity Test
+
+- Ping VClient-2 on VClient-1
+    ```
+    ping 10.1.1.102
+    ```
+- Ping VClient-1 on VClient-2
+    ```
+    ping 10.1.1.101
+    ```
+### Effect Picture
+![](https://cdn.jsdelivr.net/gh/peiyuanix/picgo-repo/data/QQ图片20230509034140.png)
