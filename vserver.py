@@ -23,7 +23,7 @@ while True:
     print(f"    ARP Cache: {arp_cache}")
 
   if eth_dst in arp_cache:
-    vserver_sock.sendto(data, eth_dst)
+    vserver_sock.sendto(data, arp_cache[eth_dst])
     print(f"    To: {eth_dst}")
   elif eth_dst == "ff:ff:ff:ff:ff:ff":
     brd_dst_macs = list(arp_cache.keys())
