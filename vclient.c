@@ -1,18 +1,16 @@
-#include "proto/tuntap.h"
-#include "misc/utils.h"
-#include "misc/logger.h"
+#include "tap_utils.h"
+#include "sys_utils.h"
 #include <stdbool.h>
 #include <assert.h>
 #include <stdint.h>
 #include <arpa/inet.h>
 #include <net/ethernet.h>
-#include <platform/portable_network.h>
 #include <pthread.h>
 
 struct vclient_t
 {
   int tapfd;
-  SOCKET vclient_sockfd;
+  int vclient_sockfd;
   struct sockaddr_in vserver_addr;
 };
 
@@ -68,10 +66,10 @@ void vclient_init(struct vclient_t *vclient, const char *vserver_ip_str, int vse
   }
 
   // create socket & prepare vserver info
-  SOCKET vclient_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-  if (!portable_is_socket_valid(vclient_sockfd))
+  int vclient_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+  if (vclient_sockfd < 0)
   {
-    ERROR_PRINT_THEN_EXIT("fail to socket: %s\n", portable_socket_api_strerror());
+    ERROR_PRINT_THEN_EXIT("fail to socket: %s\n", strerror(errno));
   }
   struct sockaddr_in vserver_addr;
   memset(&vserver_addr, 0, sizeof(vserver_addr));
@@ -79,14 +77,14 @@ void vclient_init(struct vclient_t *vclient, const char *vserver_ip_str, int vse
   vserver_addr.sin_port = htons(vserver_port);
   if (inet_pton(AF_INET, vserver_ip_str, &vserver_addr.sin_addr) != 1)
   {
-    ERROR_PRINT_THEN_EXIT("fail to inet_pton: %s\n", portable_socket_api_strerror());
+    ERROR_PRINT_THEN_EXIT("fail to inet_pton: %s\n", strerror(errno));
   }
 
   vclient->tapfd = tapfd;
   vclient->vclient_sockfd = vclient_sockfd;
   vclient->vserver_addr = vserver_addr;
 
-  printf("[YuanVPN] TAP device name: %s, VServer: %s:%d\n", ifname, vserver_ip_str, vserver_port);
+  printf("[VClient] TAP device name: %s, VServer: %s:%d\n", ifname, vserver_ip_str, vserver_port);
 }
 
 void *forward_ether_data_to_vserver(void *raw_vclient)
@@ -104,10 +102,10 @@ void *forward_ether_data_to_vserver(void *raw_vclient)
       ssize_t sendsz = sendto(vclient->vclient_sockfd, ether_data, ether_datasz, 0, (struct sockaddr *)&vclient->vserver_addr, sizeof(vclient->vserver_addr));
       if (sendsz != ether_datasz)
       {
-        LOG_ERROR("sendto size mismatch: ether_datasz=%d, sendsz=%d\n", ether_datasz, sendsz);
+        fprintf(stderr, "sendto size mismatch: ether_datasz=%d, sendsz=%d\n", ether_datasz, sendsz);
       }
 
-      printf("[YuanVPN] Sent to VServer:"
+      printf("[VClient] Sent to VServer:"
              " dhost<%02x:%02x:%02x:%02x:%02x:%02x>"
              " shost<%02x:%02x:%02x:%02x:%02x:%02x>"
              " type<%04x>"
@@ -137,10 +135,10 @@ void *forward_ether_data_to_tap(void *raw_vclient)
       ssize_t sendsz = write(vclient->tapfd, ether_data, ether_datasz);
       if (sendsz != ether_datasz)
       {
-        LOG_ERROR("sendto size mismatch: ether_datasz=%d, sendsz=%d\n", ether_datasz, sendsz);
+        fprintf(stderr, "sendto size mismatch: ether_datasz=%d, sendsz=%d\n", ether_datasz, sendsz);
       }
 
-      printf("[YuanVPN] Forward to TAP device:"
+      printf("[VClient] Forward to TAP device:"
              " dhost<%02x:%02x:%02x:%02x:%02x:%02x>"
              " shost<%02x:%02x:%02x:%02x:%02x:%02x>"
              " type<%04x>"

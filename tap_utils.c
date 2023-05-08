@@ -1,4 +1,4 @@
-#include "tuntap.h"
+#include "tap_utils.h"
 
 int tap_alloc(char *dev)
 {
